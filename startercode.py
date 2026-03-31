@@ -74,7 +74,21 @@ def search_breed(breed_id):
         JSON body as a dict (with a top-level 'data' key on success), OR None if the
         request failed or the response does not represent a successful breed lookup.
     """
-    pass
+    url = f"https://dogapi.dog/api/v2/breeds/{breed_id}"
+    try:
+        response = requests.get(url)
+    except:
+        return None
+
+    if response.status_code != 200:
+        return None
+
+    parsed = response.json()
+
+    if parsed.get("data") is None:
+        return None
+
+    return (parsed, url)
 
 
 def update_cache(breed_ids, cache_file):
@@ -91,7 +105,25 @@ def update_cache(breed_ids, cache_file):
         A string: "Cached data for {percentage}% of breeds",
         where percentage = (successful_new_adds / len(breed_ids)) * 100.
     """
-    pass
+    cache = load_json(cache_file)
+    new_count = 0
+    total = len(breed_ids)
+
+    for breed_id in breed_ids:
+        url = f"https://dogapi.dog/api/v2/breeds/{breed_id}"
+        if url in cache:
+            continue
+
+        result = search_breed(breed_id)
+        if result is not None:
+            parsed_json, request_url = result
+            cache[request_url] = parsed_json
+            new_count += 1
+
+    create_cache(cache, cache_file)
+
+    percentage = (new_count / total) * 100
+    return f"Cached data for {percentage}% of breeds"
 
 
 def get_longest_lifespan_breed(cache_file):
